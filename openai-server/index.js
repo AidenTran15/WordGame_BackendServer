@@ -36,6 +36,9 @@ const validateWord = async (word) => {
   }
 };
 
+// Store previously generated words to avoid duplicates
+let previousWords = [];
+
 app.post('/generate-word', async (req, res) => {
   const { lastLetter } = req.body;
   try {
@@ -70,6 +73,12 @@ app.post('/generate-word', async (req, res) => {
     let isValid = false;
     while (attempts < 3 && !isValid) { // Reduce the retry limit to 3
       isValid = await generateAndValidateWord();
+      if (!previousWords.includes(newWord)) {
+        previousWords.push(newWord);
+        isValid = true;
+      } else {
+        isValid = false;
+      }
       attempts++;
     }
 
@@ -92,6 +101,62 @@ app.post('/validate-word', async (req, res) => {
   } catch (error) {
     console.error('Error validating word:', error);
     res.status(500).json({ error: 'Error validating word' });
+  }
+});
+
+app.get('/generate-question', async (req, res) => {
+  try {
+    let questionGenerated = false;
+    let attempts = 0;
+    let parsedQuestion = {};
+
+    while (!questionGenerated && attempts < 10) { // Limit to 10 attempts to avoid infinite loop
+      const response = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          { role: 'system', content: 'You are a helpful assistant.' },
+          { role: 'user', content: 'Give me a word and four options where one of the options is a synonym of the word. Format it as: "Word: [word], Options: [option1, option2, option3, option4], Correct Answer: [correctOption]"' }
+        ],
+        max_tokens: 100,
+        temperature: 0.7,
+      });
+
+      const messageContent = response.choices[0].message.content.trim();
+      console.log('OpenAI response:', messageContent); // Log the full response
+
+      // Regex patterns to match word, options, and correct answer
+      const wordMatch = messageContent.match(/Word:\s*([^\n,]+)/);
+      const optionsMatch = messageContent.match(/Options:\s*([^\]]+)/);
+      const correctAnswerMatch = messageContent.match(/Correct Answer:\s*([^\n,]+)/);
+
+      if (wordMatch && optionsMatch && correctAnswerMatch) {
+        const word = wordMatch[1].trim();
+        let options = optionsMatch[1].split(/,\s*/).map(option => option.replace(/^[A-D]\)\s*/, '').trim());
+        const correctAnswer = correctAnswerMatch[1].replace(/^[A-D]\)\s*/, '').trim();
+
+        parsedQuestion = { word, options, correctAnswer };
+
+        // Check if this word is a duplicate
+        const isDuplicateWord = previousWords.includes(word);
+
+        if (!isDuplicateWord) {
+          previousWords.push(word);
+          questionGenerated = true;
+        }
+      }
+
+      attempts++;
+    }
+
+    if (questionGenerated) {
+      res.json(parsedQuestion);
+    } else {
+      console.error('Failed to generate a unique question');
+      res.status(500).json({ error: 'Failed to generate a unique question' });
+    }
+  } catch (error) {
+    console.error('Error generating question from OpenAI:', error);
+    res.status(500).json({ error: 'Error generating question from AI' });
   }
 });
 
