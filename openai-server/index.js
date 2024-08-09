@@ -15,6 +15,8 @@ const openai = new OpenAI({
 app.use(cors());
 app.use(express.json());
 
+let questionInProgress = false; // Global flag to lock question generation
+
 // Adjusted rate limiting middleware
 const limiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
@@ -106,23 +108,33 @@ app.post('/validate-word', async (req, res) => {
 
 app.get('/generate-question', async (req, res) => {
   try {
+    if (questionInProgress) {
+      return res.status(429).json({ error: 'Question generation in progress, please wait.' });
+    }
+
+    questionInProgress = true; // Lock the question generation
+
     let questionGenerated = false;
     let attempts = 0;
     let parsedQuestion = {};
 
-    while (!questionGenerated && attempts < 10) { // Limit to 10 attempts to avoid infinite loop
+    // Convert previous words array to a string to include in the prompt
+    const previousWordsString = previousWords.join(', ');
+
+    while (!questionGenerated && attempts < 20) { // Increased attempt limit
       const response = await openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
         messages: [
           { role: 'system', content: 'You are a helpful assistant.' },
-          { role: 'user', content: 'Give me a word and four options where one of the options is a synonym of the word. Format it as: "Word: [word], Options: [option1, option2, option3, option4], Correct Answer: [correctOption]"' }
+          { role: 'user', content: `I need you to give me a unique word and four options where one of the options is a synonym of the word. Do not use any of these words: [${previousWordsString}]. Try to choose less common words. Format it as: "Word: [word], Options: [option1, option2, option3, option4], Correct Answer: [correctOption]"` }
         ],
         max_tokens: 100,
-        temperature: 0.7,
+        temperature: 0.9, // Increased temperature for more diversity
+        top_p: 0.95, // Adjusted top_p for varied choices
       });
 
       const messageContent = response.choices[0].message.content.trim();
-      console.log('OpenAI response:', messageContent); // Log the full response
+      console.log('OpenAI response:', messageContent);
 
       // Regex patterns to match word, options, and correct answer
       const wordMatch = messageContent.match(/Word:\s*([^\n,]+)/);
@@ -139,7 +151,6 @@ app.get('/generate-question', async (req, res) => {
 
         parsedQuestion = { word, options, correctAnswer };
 
-        // Check if this word is a duplicate
         const isDuplicateWord = previousWords.includes(word);
 
         if (!isDuplicateWord) {
@@ -157,9 +168,15 @@ app.get('/generate-question', async (req, res) => {
       console.error('Failed to generate a unique question');
       res.status(500).json({ error: 'Failed to generate a unique question' });
     }
+
+    if (previousWords.length > 50) {
+      previousWords = [];
+    }
   } catch (error) {
     console.error('Error generating question from OpenAI:', error);
     res.status(500).json({ error: 'Error generating question from AI' });
+  } finally {
+    questionInProgress = false; // Unlock the question generation
   }
 });
 
