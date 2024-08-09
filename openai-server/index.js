@@ -134,6 +134,9 @@ app.get('/generate-question', async (req, res) => {
         let options = optionsMatch[1].split(/,\s*/).map(option => option.replace(/^[A-D]\)\s*/, '').trim());
         const correctAnswer = correctAnswerMatch[1].replace(/^[A-D]\)\s*/, '').trim();
 
+        // Remove the correct answer from the options array if it's included
+        options = options.filter(option => option !== `Correct Answer: ${correctAnswer}`);
+
         parsedQuestion = { word, options, correctAnswer };
 
         // Check if this word is a duplicate
@@ -159,6 +162,7 @@ app.get('/generate-question', async (req, res) => {
     res.status(500).json({ error: 'Error generating question from AI' });
   }
 });
+
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
