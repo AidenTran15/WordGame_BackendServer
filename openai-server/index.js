@@ -26,21 +26,46 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
-// Function to validate word using dictionary API
+// Function to validate word using dictionary API and translate definition to Vietnamese using OpenAI
 const validateWord = async (word) => {
   try {
+    // Fetch English definition
     const response = await axios.get(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
-    console.log(`Validation response for word "${word}":`, response.data); // Add logging
-    return response.status === 200;
+    console.log(`Dictionary API response for "${word}":`, response.data);
+
+    if (!response.data || response.data.length === 0 || !response.data[0].meanings || !response.data[0].meanings.length) {
+      console.error('No valid data returned from the Dictionary API.');
+      return { valid: false, englishDefinition: null, vietnameseDefinition: null };
+    }
+
+    const englishDefinition = response.data[0].meanings[0].definitions[0].definition;
+    console.log(`English definition found: "${englishDefinition}"`);
+
+    // Use OpenAI to generate a Vietnamese translation
+    const translationResponse = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant who translates English text to Vietnamese.' },
+        { role: 'user', content: `Translate the following English text to Vietnamese: "${englishDefinition}"` },
+      ],
+      max_tokens: 100,
+      temperature: 0.5,  // Adjust temperature if needed for more accurate translations
+    });
+
+    const vietnameseDefinition = translationResponse.choices[0].message.content.trim();
+    console.log(`Vietnamese definition generated: "${vietnameseDefinition}"`);
+
+    return { valid: true, englishDefinition, vietnameseDefinition };
   } catch (error) {
-    console.error(`Validation failed for word "${word}":`, error.response ? error.response.data : error.message);
-    return false;
+    console.error(`Error in validateWord function for "${word}":`, error.response ? error.response.data : error.message);
+    return { valid: false, englishDefinition: null, vietnameseDefinition: null };
   }
 };
 
 // Store previously generated words to avoid duplicates
 let previousWords = [];
 
+// Endpoint to generate a new word based on the last letter
 app.post('/generate-word', async (req, res) => {
   const { lastLetter } = req.body;
   try {
@@ -69,7 +94,7 @@ app.post('/generate-word', async (req, res) => {
       newWord = newWord.split(/\s+/)[0].replace(/[^a-zA-Z]/g, '');
 
       const isValid = await validateWord(newWord);
-      return isValid;
+      return isValid.valid;
     };
 
     let isValid = false;
@@ -95,17 +120,19 @@ app.post('/generate-word', async (req, res) => {
   }
 });
 
+// Endpoint to validate a word and get its definition in both English and Vietnamese
 app.post('/validate-word', async (req, res) => {
   const { word } = req.body;
   try {
-    const isValid = await validateWord(word);
-    res.json({ valid: isValid });
+    const { valid, englishDefinition, vietnameseDefinition } = await validateWord(word);
+    res.json({ valid, englishDefinition, vietnameseDefinition });
   } catch (error) {
     console.error('Error validating word:', error);
     res.status(500).json({ error: 'Error validating word' });
   }
 });
 
+// Endpoint to generate a unique question for the game
 app.get('/generate-question', async (req, res) => {
   try {
     if (questionInProgress) {
@@ -179,7 +206,6 @@ app.get('/generate-question', async (req, res) => {
     questionInProgress = false; // Unlock the question generation
   }
 });
-
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
