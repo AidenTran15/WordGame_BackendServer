@@ -355,6 +355,39 @@ app.get('/generate-question-hard-level', async (req, res) => {
   }
 });
 
+// New endpoint to generate a word and definition based on the selected topic
+app.post('/generate-vocabulary-word', async (req, res) => {
+  const { topic } = req.body;
+  
+  try {
+    // Use OpenAI to generate a word based on the topic
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant that provides vocabulary words for specific topics.' },
+        { role: 'user', content: `Give me a word related to the topic "${topic}".` },
+      ],
+      max_tokens: 10,
+      temperature: 0.7,
+    });
+
+    let word = response.choices[0].message.content.trim().toLowerCase();
+
+    // Validate the word and get its definition
+    const { valid, englishDefinition, vietnameseDefinition } = await validateWord(word);
+
+    if (!valid) {
+      throw new Error('Generated word is not valid.');
+    }
+
+    res.json({ word, englishDefinition, vietnameseDefinition });
+  } catch (error) {
+    console.error('Error generating vocabulary word:', error);
+    res.status(500).json({ error: 'Failed to generate vocabulary word' });
+  }
+});
+
+
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });
