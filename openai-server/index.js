@@ -432,12 +432,14 @@ app.post('/generate-vocabulary-word', async (req, res) => {
     let attempts = 0;
     const maxAttempts = 10;
 
+    console.log(`Starting to generate a vocabulary word for the topic: ${topic}`);
+
     while (attempts < maxAttempts && !valid) {
       const response = await openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
         messages: [
           { role: 'system', content: 'You are an expert in English vocabulary, specializing in providing words related to specific topics.' },
-          { role: 'user', content: `Provide a word must related to the topic "${topic}". Avoid generating any of these used words: [${usedWords.join(', ')}].` },
+          { role: 'user', content: `Provide a common word people normal use in daily life related to the topic "${topic}". Avoid generating any of these used words: [${usedWords.join(', ')}]. And avoid generating any of these used words: A, The, Sure, One.` },
         ],
         max_tokens: 10,
         temperature: 0.5,
@@ -446,29 +448,38 @@ app.post('/generate-vocabulary-word', async (req, res) => {
       word = response.choices[0].message.content.trim().toLowerCase();
       word = word.split(/\s+/)[0].replace(/[^a-zA-Z]/g, '');
 
+      console.log(`Generated word: ${word}`);
+
       if (!usedWords.includes(word)) {
         const validation = await validateWord(word);
         valid = validation.valid;
         englishDefinition = validation.englishDefinition;
         vietnameseDefinition = validation.vietnameseDefinition;
-        
+
         if (valid) {
           usedWords.push(word);
+          console.log(`Word "${word}" is valid and added to the used words list.`);
+        } else {
+          console.log(`Word "${word}" is not valid. Trying again...`);
         }
+      } else {
+        console.log(`Word "${word}" has already been used. Trying again...`);
       }
 
       attempts++;
     }
 
     if (!valid) {
-      throw new Error('Failed to generate a valid and unique word.');
+      throw new Error('Failed to generate a valid and unique word after multiple attempts.');
     }
 
     res.json({ word, englishDefinition, vietnameseDefinition });
   } catch (error) {
+    console.error('Error generating vocabulary word:', error.message);
     res.status(500).json({ error: 'Failed to generate a vocabulary word' });
   }
 });
+
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
