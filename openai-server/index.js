@@ -27,6 +27,10 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
+
+
+
+
 // Function to validate word using dictionary API and translate definition to Vietnamese using OpenAI
 const validateWord = async (word) => {
   try {
@@ -60,6 +64,44 @@ const validateWord = async (word) => {
 
 // Store previously generated words to avoid duplicates
 let previousWords = [];
+
+
+// New API to get Vietnamese meaning of a word
+app.post('/translate-word', async (req, res) => {
+  const { word } = req.body;
+
+  if (!word) {
+    return res.status(400).json({ error: 'No word provided' });
+  }
+
+  try {
+    // Request only the Vietnamese word as the response, no extra phrases
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant who translates English words to Vietnamese.' },
+        { role: 'user', content: `Translate the word "${word}" to Vietnamese. Respond with only the Vietnamese word.` },
+      ],
+      max_tokens: 10,
+      temperature: 0.5,
+    });
+
+    const vietnameseTranslation = response.choices[0].message.content.trim();
+    res.json({ word, vietnameseTranslation });
+  } catch (error) {
+    console.error('Error translating word:', error);
+    res.status(500).json({ error: 'Error translating word with AI' });
+  }
+});
+
+
+
+app.post('/test', (req, res) => {
+  res.send('Test route works!');
+});
+
+
+
 
 // Endpoint to generate a new word based on the last letter
 app.post('/generate-word', async (req, res) => {
