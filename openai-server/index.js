@@ -522,6 +522,28 @@ app.post('/generate-vocabulary-word', async (req, res) => {
   }
 });
 
+// Endpoint to generate a daily life conversation
+app.post('/generate-daily-talk', async (req, res) => {
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant. Generate a short, daily-life conversation between two people.' },
+        { role: 'user', content: 'Give me a realistic, short conversation that could happen in daily life.' }
+      ],
+      max_tokens: 150,
+      temperature: 0.7,
+    });
+
+    const conversation = response.choices[0].message.content.trim();
+    res.json({ conversation });
+  } catch (error) {
+    console.error('Error generating conversation:', error);
+    res.status(500).json({ error: 'Error generating conversation' });
+  }
+});
+
+
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
