@@ -481,7 +481,7 @@ app.post('/generate-vocabulary-word', async (req, res) => {
         model: 'gpt-3.5-turbo',
         messages: [
           { role: 'system', content: 'You are an expert in English vocabulary, specializing in providing words related to specific topics.' },
-          { role: 'user', content: `Provide a common word people normal use in daily life related to the topic "${topic}". Avoid generating any of these used words: [${usedWords.join(', ')}]. And avoid generating any of these used words: A, The, Sure, One.` },
+          { role: 'user', content: `Provide a common word people normal use in daily life related to the topic "${topic}". Avoid generating any of these used words: [${usedWords.join(', ')}]. And never generating any of these words: A, The, Sure, One.` },
         ],
         max_tokens: 10,
         temperature: 0.5,
