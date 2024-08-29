@@ -522,14 +522,21 @@ app.post('/generate-vocabulary-word', async (req, res) => {
   }
 });
 
-// Endpoint to generate a daily life conversation
 app.post('/generate-daily-talk', async (req, res) => {
   try {
+    const { conversationType } = req.body; // Expecting a conversation type from the client
+
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
-        { role: 'system', content: 'You are a helpful assistant. Generate a short, daily-life conversation between two people.' },
-        { role: 'user', content: 'Give me a realistic, short conversation that could happen in daily life.' }
+        { 
+          role: 'system', 
+          content: `You are a helpful assistant. Generate a short, daily-life conversation between two people.` 
+        },
+        { 
+          role: 'user', 
+          content: `Give me a realistic, short conversation that could happen in daily life, for example, the conversation could be Professional Conversations, Negotiations, Interviews, Debates, Counseling or Mentoring, Instructional Conversations, Conflict Resolution, Persuasive Conversations, Decision-Making Conversations.` 
+        }
       ],
       max_tokens: 150,
       temperature: 0.7,
