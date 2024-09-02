@@ -550,6 +550,33 @@ app.post('/generate-daily-talk', async (req, res) => {
   }
 });
 
+app.post('/converse', async (req, res) => {
+  const { userInput } = req.body;
+
+  if (!userInput) {
+    return res.status(400).json({ error: 'No input provided' });
+  }
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        { role: 'system', content: 'You are a friendly and helpful assistant who engages in casual conversations.' },
+        { role: 'user', content: `${userInput}` }
+      ],
+      max_tokens: 150,
+      temperature: 0.7,
+    });
+
+    const aiResponse = response.choices[0].message.content.trim();
+    res.json({ response: aiResponse });
+  } catch (error) {
+    console.error('Error during conversation:', error);
+    res.status(500).json({ error: 'Error during conversation' });
+  }
+});
+
+
 
 
 app.listen(port, () => {
