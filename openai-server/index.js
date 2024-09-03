@@ -577,6 +577,90 @@ app.post('/converse', async (req, res) => {
 });
 
 
+// Global state to track the interview process
+let interviewSession = {
+  questionsAsked: [],
+  currentQuestionIndex: 0,
+  userResponses: []
+};
+
+// Endpoint to start the interview session
+app.post('/start-interview', async (req, res) => {
+  try {
+    interviewSession = {
+      questionsAsked: [],
+      currentQuestionIndex: 0,
+      userResponses: []
+    };
+    
+    const firstQuestion = await generateInterviewQuestion();
+    res.json({ question: firstQuestion });
+  } catch (error) {
+    console.error('Error starting interview:', error);
+    res.status(500).json({ error: 'Failed to start interview' });
+  }
+});
+
+// Function to generate an interview question
+const generateInterviewQuestion = async () => {
+  const interviewQuestions = [
+    "Tell me about yourself.",
+    "Why do you want this job?",
+    "What are your greatest strengths?",
+    "What are your weaknesses?",
+    "Where do you see yourself in 5 years?",
+    // Add more questions as needed
+  ];
+
+  const question = interviewQuestions[interviewSession.currentQuestionIndex];
+  interviewSession.questionsAsked.push(question);
+  return question;
+};
+
+// Endpoint to submit an interview answer
+app.post('/submit-interview-answer', async (req, res) => {
+  const { answer } = req.body;
+
+  if (!answer) {
+    return res.status(400).json({ error: 'No answer provided' });
+  }
+
+  try {
+    interviewSession.userResponses.push(answer);
+
+    // Check if the interview should end after 5 questions
+    if (interviewSession.currentQuestionIndex >= 4) { // After 5th question
+      const feedback = await generateInterviewFeedback();
+      return res.json({ feedback });
+    } else {
+      // Move to the next question
+      interviewSession.currentQuestionIndex++;
+      const nextQuestion = await generateInterviewQuestion();
+      res.json({ question: nextQuestion });
+    }
+  } catch (error) {
+    console.error('Error submitting interview answer:', error);
+    res.status(500).json({ error: 'Error submitting interview answer' });
+  }
+});
+
+
+// Function to generate feedback after the interview
+const generateInterviewFeedback = async () => {
+  const userResponses = interviewSession.userResponses.join(" ");
+  const response = await openai.chat.completions.create({
+    model: 'gpt-3.5-turbo',
+    messages: [
+      { role: 'system', content: 'You are an expert interviewer.' },
+      { role: 'user', content: `Rate the following interview responses on a scale of 1 to 10 and provide feedback on how the candidate can improve: "${userResponses}"` }
+    ],
+    max_tokens: 150,
+    temperature: 0.7,
+  });
+
+  return response.choices[0].message.content.trim();
+};
+
 
 
 app.listen(port, () => {
