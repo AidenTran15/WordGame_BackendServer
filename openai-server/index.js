@@ -696,7 +696,7 @@ app.post('/friendly-conversation', async (req, res) => {
 
   try {
     const messages = [
-      { role: 'system', content: 'You are a friendly and conversational AI named Kaylee. Start a friendly conversation, ask about their day, plans, favorite things, and respond in a friendly and casual tone.' },
+      { role: 'system', content: 'You are a friendly and conversational AI named Aiden. Start a friendly conversation, ask about their day, plans, favorite things, and respond in a friendly and casual tone.' },
       { role: 'assistant', content: 'Hello, my name is Aiden, I\'m 22 years old, I just graduated with a Bachelor of IT at RMIT. Nice to meet you! Can you introduce yourself?' },
       { role: 'user', content: userInput }
     ];
