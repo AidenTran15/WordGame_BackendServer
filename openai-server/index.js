@@ -651,13 +651,13 @@ const generateInterviewFeedback = async () => {
   const response = await openai.chat.completions.create({
     model: 'gpt-3.5-turbo',
     messages: [
-      { role: 'system', content: 'You are an expert interviewer.' },
-      { role: 'user', content: `Provide feedback on the following interview responses. 
+      { role: 'system', content: 'You are an expert interviewer providing detailed, constructive feedback. The feedback must include strengths, specific areas of improvement, and actionable recommendations for improvement.' },
+      { role: 'user', content: `Provide detailed feedback on the following interview responses. 
       Divide the feedback into the following JSON format with "summary", "strengths", 
-      "improvementAreas", and "recommendations". Return only JSON data, no explanations or text outside of JSON format.
+      "improvementAreas", and "recommendations". Make the feedback specific with clear suggestions for improvement. 
       Interview responses: "${userResponses}"` }
     ],
-    max_tokens: 250,
+    max_tokens: 300,
     temperature: 0.7,
   });
 
@@ -685,6 +685,7 @@ const generateInterviewFeedback = async () => {
 
   return feedback;
 };
+
 
 
 
