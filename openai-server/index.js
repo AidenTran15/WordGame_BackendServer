@@ -652,14 +652,43 @@ const generateInterviewFeedback = async () => {
     model: 'gpt-3.5-turbo',
     messages: [
       { role: 'system', content: 'You are an expert interviewer.' },
-      { role: 'user', content: `Rate the following interview responses on a scale of 1 to 10 and provide feedback on how the candidate can improve: "${userResponses}"` }
+      { role: 'user', content: `Provide feedback on the following interview responses. 
+      Divide the feedback into the following JSON format with "summary", "strengths", 
+      "improvementAreas", and "recommendations". Return only JSON data, no explanations or text outside of JSON format.
+      Interview responses: "${userResponses}"` }
     ],
-    max_tokens: 150,
+    max_tokens: 250,
     temperature: 0.7,
   });
 
-  return response.choices[0].message.content.trim();
+  // Try to remove code block formatting and parse the JSON response
+  let feedbackContent = response.choices[0].message.content.trim();
+
+  // Remove ```json or ``` if present
+  if (feedbackContent.startsWith("```")) {
+    feedbackContent = feedbackContent.replace(/```json|```/g, '');
+  }
+
+  let feedback;
+  try {
+    feedback = JSON.parse(feedbackContent);
+  } catch (error) {
+    console.error('Error parsing feedback JSON:', error);
+    // If parsing fails, return a generic feedback structure
+    feedback = {
+      summary: "Unable to parse detailed feedback. Here is a general review.",
+      strengths: [],
+      improvementAreas: [],
+      recommendations: "Review your responses and aim to provide more concise and direct answers."
+    };
+  }
+
+  return feedback;
 };
+
+
+
+
 
 
 
