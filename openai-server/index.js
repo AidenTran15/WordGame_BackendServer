@@ -687,6 +687,34 @@ const generateInterviewFeedback = async () => {
 };
 
 
+app.post('/friendly-conversation', async (req, res) => {
+  const { userInput } = req.body;
+
+  if (!userInput) {
+    return res.status(400).json({ error: 'No input provided' });
+  }
+
+  try {
+    const messages = [
+      { role: 'system', content: 'You are a friendly and conversational AI named Kaylee. Start a friendly conversation, ask about their day, plans, favorite things, and respond in a friendly and casual tone.' },
+      { role: 'assistant', content: 'Hello, my name is Aiden, I\'m 22 years old, I just graduated with a Bachelor of IT at RMIT. Nice to meet you! Can you introduce yourself?' },
+      { role: 'user', content: userInput }
+    ];
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages,
+      max_tokens: 150,
+      temperature: 0.8,
+    });
+
+    const aiResponse = response.choices[0].message.content.trim();
+    res.json({ response: aiResponse });
+  } catch (error) {
+    console.error('Error during Friendly AI conversation:', error);
+    res.status(500).json({ error: 'Error during Friendly AI conversation' });
+  }
+});
 
 
 
