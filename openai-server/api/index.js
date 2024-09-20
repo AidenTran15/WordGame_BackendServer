@@ -16,7 +16,7 @@ const openai = new OpenAI({
 
 // CORS configuration to allow requests from specific origins (localhost for development)
 const corsOptions = {
-  origin: 'http://localhost:3000', // Change this to your frontend domain in production
+  origin: ['http://localhost:3000', 'https://wordgame.aidenkiettran.com'],
   methods: ['GET', 'POST'],        // Allowed methods
   credentials: true                // Allow credentials if needed
 };
