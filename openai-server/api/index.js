@@ -1,31 +1,42 @@
+require('dotenv').config();
+console.log('OpenAI API Key:', process.env.OPENAI_API_KEY);
+
 const express = require('express');
 const { OpenAI } = require('openai');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const axios = require('axios');
-require('dotenv').config();
 
 const app = express();
 const port = 5000;
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY, // Using the OpenAI API key from .env
 });
 
-app.use(cors());
+// CORS configuration to allow requests from specific origins (localhost for development)
+const corsOptions = {
+  origin: 'http://localhost:3000', // Change this to your frontend domain in production
+  methods: ['GET', 'POST'],        // Allowed methods
+  credentials: true                // Allow credentials if needed
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
-let questionInProgress = false; // Global flag to lock question generation
-let usedWords = []; // Store used words
-
-// Adjusted rate limiting middleware
+// Adjusted rate limiting middleware (optional)
 const limiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 60, // Allow 60 requests per windowMs
+  max: 60,                 // Allow 60 requests per minute
   message: 'Too many requests from this IP, please try again after a minute',
 });
 
-app.use(limiter);
+app.use(limiter); // Apply rate limiting globally after CORS
+
+
+
+// Remaining routes go here...
+
 
 
 
@@ -93,13 +104,6 @@ app.post('/translate-word', async (req, res) => {
     res.status(500).json({ error: 'Error translating word with AI' });
   }
 });
-
-
-
-app.post('/test', (req, res) => {
-  res.send('Test route works!');
-});
-
 
 
 
