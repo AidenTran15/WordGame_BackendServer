@@ -174,6 +174,8 @@ app.post('/validate-word', async (req, res) => {
   }
 });
 
+let questionInProgress = false;
+
 // Endpoint to generate a unique question for the game
 app.get('/generate-question-easy-level', async (req, res) => {
   try {
